@@ -1,0 +1,16 @@
+{
+  "name": "wanderluxe-ai-root",
+  "version": "1.0.0",
+  "description": "Orquestador del proyecto",
+  "scripts": {
+    "start:server": "cd server && npx nodemon index.js",
+    "start:client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run start:server\" \"npm run start:client\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,11 @@
+# Dependencias
+node_modules
+/server/node_modules
+/client/node_modules
+
+# Variables de entorno (Secretas)
+/server/.env
+/client/.env
+
+# Archivos de compilación de Vite
+/client/dist
