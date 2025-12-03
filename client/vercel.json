@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://wanderluxe-ai.onrender.com"
+      "destination": "https://wanderluxe-ai.onrender.com/api/:path*"
     }
   ]
 }
