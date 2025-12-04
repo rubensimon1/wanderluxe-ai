@@ -1,75 +1,77 @@
 const db = require('../../db');
-const { GoogleGenAI } = require('@google/genai'); // Importar SDK de Gemini
+const { GoogleGenAI } = require('@google/genai'); 
 
-// Inicializar el cliente de Gemini usando la clave del .env
+// Inicializar el cliente de Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); 
 
-// --- FUNCIÓN CENTRAL: LLAMADA A LA IA REAL ---
-const generateItineraryReal = async (destination, days, budget, travelers) => {
-    // Definimos el prompt para la IA
-    const userPrompt = `Crea un itinerario de viaje de ${days} días para ${travelers} personas a ${destination}, enfocado en un estilo ${budget}. El itinerario debe ser detallado y exclusivo. Proporciona también las coordenadas geográficas (latitud y longitud) del destino principal.`;
-
-    // Definimos el esquema de JSON que queremos que la IA devuelva (estructura)
-    const schema = {
-        type: "OBJECT",
-        properties: {
-            title: { type: "STRING", description: "Un título atractivo para el viaje." },
-            description: { type: "STRING", description: "Resumen breve del viaje y el estilo." },
-            
-            // --- NUEVO ESQUEMA: COORDENADAS ---
-            coordinates: { 
+// --- ESQUEMA DE SALIDA DE LA IA ---
+const itinerarySchema = {
+    type: "OBJECT",
+    properties: {
+        title: { type: "STRING", description: "Un título atractivo para el viaje." },
+        description: { type: "STRING", description: "Resumen breve del viaje y el estilo." },
+        dailyPlan: {
+            type: "ARRAY",
+            description: "Una lista de los planes detallados para cada día del viaje.",
+            items: {
                 type: "OBJECT",
-                description: "Coordenadas geográficas del centro del destino principal.",
                 properties: {
-                    lat: { type: "NUMBER", description: "Latitud del centro del destino principal." },
-                    lng: { type: "NUMBER", description: "Longitud del centro del destino principal." }
+                    day: { type: "INTEGER", description: "Número del día, empezando en 1." },
+                    activity: { type: "STRING", description: "Descripción detallada de la actividad principal del día, incluyendo visitas o cenas." }
                 },
-                required: ["lat", "lng"]
-            },
-            // ------------------------------------
-
-            dailyPlan: {
-                type: "ARRAY",
-                description: "Una lista de los planes detallados para cada día del viaje.",
-                items: {
-                    type: "OBJECT",
-                    properties: {
-                        day: { type: "INTEGER", description: "Número del día, empezando en 1." },
-                        activity: { type: "STRING", description: "Descripción detallada de la actividad principal del día." }
-                    },
-                    required: ["day", "activity"]
-                }
-            },
-            highlights: { type: "ARRAY", items: { type: "STRING" }, description: "Tres o cuatro puntos clave y exclusivos del itinerario." }
+                required: ["day", "activity"]
+            }
         },
-        // Aseguramos que la IA incluya las coordenadas
-        required: ["title", "description", "dailyPlan", "highlights", "coordinates"] 
-    };
+        highlights: { type: "ARRAY", items: { type: "STRING" }, description: "Tres o cuatro puntos clave y exclusivos del itinerario." },
+        coordinates: { // <--- ESQUEMA CORREGIDO: COORDENADAS NUMÉRICAS
+            type: "OBJECT",
+            description: "Coordenadas geográficas del centro del destino principal.",
+            properties: {
+                lat: { type: "NUMBER", description: "Latitud del centro del destino (Ej: 37.3888 para Sevilla)" },
+                lng: { type: "NUMBER", description: "Longitud del centro del destino (Ej: -5.995 para Sevilla)" }
+            },
+            required: ["lat", "lng"]
+        }
+    },
+    required: ["title", "description", "dailyPlan", "highlights", "coordinates"] 
+};
+
+
+// --- FUNCIÓN HELPER: LLAMADA A LA IA REAL ---
+const generateItineraryData = async (destination, days, budget, travelers) => {
+    // Instrucción precisa para la IA sobre las coordenadas
+    const userPrompt = `Crea un itinerario de viaje a ${destination}. Proporciona las coordenadas EXACTAS del centro de la ciudad para la visualización en mapas.`;
 
     try {
-        // Llamada a la API de Gemini usando el modelo flash
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: userPrompt,
             config: {
                 responseMimeType: "application/json",
-                responseSchema: schema,
+                responseSchema: itinerarySchema,
             },
         });
-
-        // La respuesta de la IA viene como un string JSON, lo parseamos
+        
         const jsonText = response.text.trim();
-        return JSON.parse(jsonText);
+        const tripData = JSON.parse(jsonText);
 
+        // Seguridad: Asegurar que los valores son números (crucial para Google Maps)
+        if (tripData.coordinates) {
+            tripData.coordinates.lat = parseFloat(tripData.coordinates.lat);
+            tripData.coordinates.lng = parseFloat(tripData.coordinates.lng);
+        }
+
+        return tripData;
+        
     } catch (error) {
         console.error("Error al llamar a Gemini API:", error.message);
-        // Si la IA falla, devolvemos un plan de respaldo
+        // Coordenadas de respaldo para Sevilla real, para que al menos veas algo en España
         return {
             title: "Error de Conexión IA",
             description: "No se pudo contactar a la IA. Inténtalo de nuevo.",
-            highlights: ["Fallo de conexión", "Inténtalo más tarde"],
+            highlights: ["Fallo de conexión"],
             dailyPlan: [{ day: 1, activity: "Error en la conexión con el servidor de IA." }],
-            coordinates: { lat: 40.4167, lng: -3.7038 } // Madrid por defecto
+            coordinates: { lat: 37.38283, lng: -5.97317 } 
         };
     }
 };
@@ -77,16 +79,14 @@ const generateItineraryReal = async (destination, days, budget, travelers) => {
 // --- CREAR VIAJE ---
 const createTrip = async (req, res) => {
     const { destination, days, budget, travelers } = req.body;
-    const userId = req.user.id; // ID del usuario logueado
-
-    console.log(`🤖 Usuario ID ${userId}: Iniciando generación REAL del viaje a ${destination}`);
+    const userId = req.user.id; 
 
     try {
-        // 1. Llamar a la IA real 
-        const tripData = await generateItineraryReal(destination, days, budget, travelers);
+        // Llamar a la IA real
+        const tripData = await generateItineraryData(destination, days, budget, travelers);
         console.log("✨ Contenido JSON generado por Gemini.");
 
-        // 2. Guardar en Base de Datos
+        // Guardar en Base de Datos
         const newTrip = await db.query(
             'INSERT INTO trips (user_id, destination, trip_data, status, budget, days, travelers) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
             [userId, destination, tripData, 'draft', budget, days, travelers]
@@ -100,8 +100,7 @@ const createTrip = async (req, res) => {
     }
 };
 
-// --- OBTENER VIAJES Y DETALLES (Se mantiene la lógica existente) ---
-
+// --- OBTENER TODOS LOS VIAJES (FILTRADO POR USUARIO) ---
 const getMyTrips = async (req, res) => {
     const userId = req.user.id;
     try {
@@ -112,6 +111,7 @@ const getMyTrips = async (req, res) => {
     }
 };
 
+// --- OBTENER UN VIAJE POR ID (SEGURIZADO) ---
 const getTripById = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;

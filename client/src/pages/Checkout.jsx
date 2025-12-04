@@ -48,14 +48,14 @@ const Checkout = () => {
             cardHolder: cardData.holder,
             cardNumber: cardData.number
         }),
-        credentials: 'include' // Vital para verificar la sesión
+        credentials: 'include' 
       });
 
       const data = await response.json();
 
       if (response.ok) {
         alert(`✅ ¡Pago Completado! ID Transacción: ${data.transactionId}`);
-        navigate('/dashboard'); // Volver al dashboard con el viaje confirmado
+        navigate('/dashboard'); 
       } else {
         alert("❌ Error: " + data.error);
         setProcessing(false);
@@ -92,7 +92,7 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between text-xl text-luxe-gold font-bold pt-2">
                     <span>Total a Pagar</span>
-                    <span>{finalPrice} €</span> {/* <--- PRECIO DINÁMICO */}
+                    <span>{finalPrice} €</span>
                 </div>
             </div>
           </div>
@@ -147,7 +147,16 @@ const Checkout = () => {
                     type="submit" disabled={processing}
                     className={`w-full py-4 mt-4 rounded-xl font-bold text-lg transition-all shadow-lg ${processing ? 'bg-gray-600 cursor-wait' : 'bg-luxe-gold text-luxe-black hover:bg-white hover:scale-[1.02]'}`}
                 >
-                    {processing ? 'Contactando con el Banco...' : `Pagar ${finalPrice} €`} {/* <--- PRECIO DINÁMICO */}
+                    {processing ? 'Contactando con el Banco...' : `Pagar ${finalPrice} €`}
+                </button>
+
+                {/* --- NUEVO: BOTÓN CANCELAR --- */}
+                <button 
+                    type="button" 
+                    onClick={() => navigate('/dashboard')}
+                    className="w-full py-3 text-gray-400 hover:text-white transition-colors text-sm underline"
+                >
+                    Cancelar y pagar más tarde
                 </button>
             </form>
         </div>
