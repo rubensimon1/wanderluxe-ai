@@ -2,13 +2,12 @@ const db = require('../../db');
 const { GoogleGenAI } = require('@google/genai'); // Importar SDK de Gemini
 
 // Inicializar el cliente de Gemini usando la clave del .env
-// Esto usa la variable GEMINI_API_KEY que configuraste.
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); 
 
 // --- FUNCIÓN CENTRAL: LLAMADA A LA IA REAL ---
 const generateItineraryReal = async (destination, days, budget, travelers) => {
     // Definimos el prompt para la IA
-    const userPrompt = `Crea un itinerario de viaje de ${days} días para ${travelers} personas a ${destination}, enfocado en un estilo ${budget}. El itinerario debe ser detallado, exclusivo, y fácil de seguir.`;
+    const userPrompt = `Crea un itinerario de viaje de ${days} días para ${travelers} personas a ${destination}, enfocado en un estilo ${budget}. El itinerario debe ser detallado y exclusivo. Proporciona también las coordenadas geográficas (latitud y longitud) del destino principal.`;
 
     // Definimos el esquema de JSON que queremos que la IA devuelva (estructura)
     const schema = {
@@ -16,6 +15,19 @@ const generateItineraryReal = async (destination, days, budget, travelers) => {
         properties: {
             title: { type: "STRING", description: "Un título atractivo para el viaje." },
             description: { type: "STRING", description: "Resumen breve del viaje y el estilo." },
+            
+            // --- NUEVO ESQUEMA: COORDENADAS ---
+            coordinates: { 
+                type: "OBJECT",
+                description: "Coordenadas geográficas del centro del destino principal.",
+                properties: {
+                    lat: { type: "NUMBER", description: "Latitud del centro del destino principal." },
+                    lng: { type: "NUMBER", description: "Longitud del centro del destino principal." }
+                },
+                required: ["lat", "lng"]
+            },
+            // ------------------------------------
+
             dailyPlan: {
                 type: "ARRAY",
                 description: "Una lista de los planes detallados para cada día del viaje.",
@@ -23,14 +35,15 @@ const generateItineraryReal = async (destination, days, budget, travelers) => {
                     type: "OBJECT",
                     properties: {
                         day: { type: "INTEGER", description: "Número del día, empezando en 1." },
-                        activity: { type: "STRING", description: "Descripción detallada de la actividad principal del día, incluyendo visitas o cenas." }
+                        activity: { type: "STRING", description: "Descripción detallada de la actividad principal del día." }
                     },
                     required: ["day", "activity"]
                 }
             },
             highlights: { type: "ARRAY", items: { type: "STRING" }, description: "Tres o cuatro puntos clave y exclusivos del itinerario." }
         },
-        required: ["title", "description", "dailyPlan", "highlights"]
+        // Aseguramos que la IA incluya las coordenadas
+        required: ["title", "description", "dailyPlan", "highlights", "coordinates"] 
     };
 
     try {
@@ -50,12 +63,13 @@ const generateItineraryReal = async (destination, days, budget, travelers) => {
 
     } catch (error) {
         console.error("Error al llamar a Gemini API:", error.message);
-        // Si la IA falla (por clave, límite, etc.), devolvemos un plan de respaldo para que la app no se rompa
+        // Si la IA falla, devolvemos un plan de respaldo
         return {
             title: "Error de Conexión IA",
             description: "No se pudo contactar a la IA. Inténtalo de nuevo.",
             highlights: ["Fallo de conexión", "Inténtalo más tarde"],
-            dailyPlan: [{ day: 1, activity: "Error en la conexión con el servidor de IA." }]
+            dailyPlan: [{ day: 1, activity: "Error en la conexión con el servidor de IA." }],
+            coordinates: { lat: 40.4167, lng: -3.7038 } // Madrid por defecto
         };
     }
 };
@@ -68,7 +82,7 @@ const createTrip = async (req, res) => {
     console.log(`🤖 Usuario ID ${userId}: Iniciando generación REAL del viaje a ${destination}`);
 
     try {
-        // 1. Llamar a la IA real (este paso ahora toma tiempo)
+        // 1. Llamar a la IA real 
         const tripData = await generateItineraryReal(destination, days, budget, travelers);
         console.log("✨ Contenido JSON generado por Gemini.");
 
@@ -86,7 +100,7 @@ const createTrip = async (req, res) => {
     }
 };
 
-// --- OBTENER VIAJES Y DETALLES (Mantenemos la lógica existente) ---
+// --- OBTENER VIAJES Y DETALLES (Se mantiene la lógica existente) ---
 
 const getMyTrips = async (req, res) => {
     const userId = req.user.id;

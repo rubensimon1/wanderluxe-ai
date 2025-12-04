@@ -10,15 +10,12 @@ const TripDetails = () => {
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        // --- RUTA RELATIVA Y CREDENCIALES ---
-        // Usamos el proxy para acceder al backend (http://localhost:3000)
         const response = await fetch(`/api/trips/${id}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include' 
         });
 
-        // 1. Manejo de error de sesión
         if (response.status === 401) {
           alert("Sesión expirada. Por favor, identifícate.");
           navigate('/login');
@@ -27,7 +24,6 @@ const TripDetails = () => {
 
         const data = await response.json();
         
-        // 2. Manejo de error de permisos o 404
         if (response.ok) {
           setTrip(data);
         } else {
@@ -53,6 +49,8 @@ const TripDetails = () => {
   );
 
   const itinerary = trip.trip_data;
+  // Usamos las coordenadas generadas por la IA, o un valor de respaldo si fallan
+  const mapCenter = itinerary.coordinates || { lat: 37.7749, lng: -122.4194 }; 
 
   return (
     <div className="min-h-screen bg-luxe-black text-luxe-white font-sans p-8">
@@ -81,23 +79,57 @@ const TripDetails = () => {
       {/* Contenido del Itinerario */}
       <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
         
-        {/* Columna Izquierda: Resumen */}
+        {/* Columna Izquierda: Mapa y Servicios */}
         <div className="md:col-span-1 space-y-6">
+          
+          {/* BLOQUE MAPA Y UBICACIÓN */}
+          <div className="bg-white/5 p-4 rounded-2xl border border-white/10 overflow-hidden shadow-lg">
+            <h3 className="text-luxe-gold font-serif text-lg mb-2">Ubicación del Destino</h3>
+            <p className="text-xs text-gray-500 mb-3">Lat: {mapCenter.lat}, Lng: {mapCenter.lng}</p>
+
+            <a 
+              href={`https://www.google.com/maps/search/?api=1&query=${mapCenter.lat},${mapCenter.lng}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block relative overflow-hidden rounded-xl group"
+            >
+                {/* Usamos un placeholder de imagen con el nombre del destino y un efecto de hover */}
+                <img 
+                    src={`https://placehold.co/600x300/1e1e1e/d4af37?text=MAPA+DE+${trip.destination.toUpperCase()}`}
+                    alt={`Mapa de ${trip.destination}`} 
+                    className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-500 opacity-80"
+                />
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-luxe-white font-bold opacity-0 group-hover:opacity-100 transition-opacity text-xl">
+                    HACER ZOOM (Abrir en Maps)
+                </div>
+            </a>
+          </div>
+
+          {/* Bloque de Servicios Adicionales (El estilo Booking) */}
+          <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+            <h3 className="text-xl font-serif text-white mb-4">Servicios Adicionales</h3>
+            <ul className="space-y-4">
+                <li>
+                    <a href="#" className="flex items-center justify-between text-gray-300 hover:text-luxe-gold transition-colors">
+                        <span>🏨 Buscar Hoteles Exclusivos</span>
+                        <span>→</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" className="flex items-center justify-between text-gray-300 hover:text-luxe-gold transition-colors">
+                        <span>🚗 Alquilar Vehículo de Lujo</span>
+                        <span>→</span>
+                    </a>
+                </li>
+            </ul>
+          </div>
+          
           <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
             <h3 className="text-luxe-gold font-serif text-lg mb-4">Resumen</h3>
             <ul className="space-y-3 text-sm text-gray-300">
               <li className="flex justify-between"><span>Duración:</span> <span className="text-white">{trip.days} Días</span></li>
               <li className="flex justify-between"><span>Viajeros:</span> <span className="text-white">{trip.travelers}</span></li>
               <li className="flex justify-between"><span>Estilo:</span> <span className="text-white">{trip.budget}</span></li>
-            </ul>
-          </div>
-
-          <div className="bg-luxe-gold/10 p-6 rounded-2xl border border-luxe-gold/30">
-            <h3 className="text-luxe-gold font-serif text-lg mb-2">Destacados ✨</h3>
-            <ul className="list-disc list-inside text-sm text-gray-300 space-y-2">
-              {itinerary.highlights ? itinerary.highlights.map((h, i) => (
-                <li key={i}>{h}</li>
-              )) : <li>Experiencia exclusiva</li>}
             </ul>
           </div>
         </div>
@@ -125,6 +157,9 @@ const TripDetails = () => {
           ))}
         </div>
       </div>
+
+      <div className="text-center mt-12 text-gray-700 text-xs">Desarrollado con React, Node.js y Gemini AI.</div>
+
     </div>
   );
 };
