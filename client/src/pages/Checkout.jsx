@@ -3,8 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { state } = useLocation(); // Recibimos los datos del viaje desde la página anterior
+  const { state } = useLocation(); 
   const trip = state?.trip;
+
+  // Obtenemos el precio final del estado, o usamos un valor de respaldo si no existe
+  const finalPrice = trip?.finalPrice || '99.00'; 
 
   const [processing, setProcessing] = useState(false);
   const [cardData, setCardData] = useState({
@@ -15,7 +18,7 @@ const Checkout = () => {
   });
 
   // Si alguien intenta entrar directo sin viaje, lo echamos
-  if (!trip) {
+  if (!trip || !trip.destination) {
     return (
       <div className="min-h-screen bg-luxe-black flex items-center justify-center text-white">
         <p>No hay viaje seleccionado. <button onClick={() => navigate('/dashboard')} className="text-luxe-gold ml-2 underline">Volver</button></p>
@@ -24,7 +27,6 @@ const Checkout = () => {
   }
 
   const handleChange = (e) => {
-    // Pequeño formateador visual para espacios en la tarjeta
     let val = e.target.value;
     if (e.target.name === 'number') {
         val = val.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
@@ -37,8 +39,7 @@ const Checkout = () => {
     setProcessing(true);
 
     try {
-      // --- CAMBIO CLAVE: RUTA RELATIVA ---
-      // El proxy de Vite enviará esto a http://localhost:3000/api/payments/pay
+      // Usamos el proxy de Vite
       const response = await fetch('/api/payments/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,20 +48,20 @@ const Checkout = () => {
             cardHolder: cardData.holder,
             cardNumber: cardData.number
         }),
-        credentials: 'include' // Vital para verificar que el usuario está logueado al pagar
+        credentials: 'include' // Vital para verificar la sesión
       });
 
       const data = await response.json();
 
       if (response.ok) {
         alert(`✅ ¡Pago Completado! ID Transacción: ${data.transactionId}`);
-        navigate('/dashboard'); // Volver al dashboard para ver el viaje confirmado
+        navigate('/dashboard'); // Volver al dashboard con el viaje confirmado
       } else {
         alert("❌ Error: " + data.error);
         setProcessing(false);
       }
     } catch (error) {
-      alert("Error de conexión");
+      alert("Error de conexión con el servidor");
       setProcessing(false);
     }
   };
@@ -91,7 +92,7 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between text-xl text-luxe-gold font-bold pt-2">
                     <span>Total a Pagar</span>
-                    <span>99.00 €</span>
+                    <span>{finalPrice} €</span> {/* <--- PRECIO DINÁMICO */}
                 </div>
             </div>
           </div>
@@ -146,7 +147,7 @@ const Checkout = () => {
                     type="submit" disabled={processing}
                     className={`w-full py-4 mt-4 rounded-xl font-bold text-lg transition-all shadow-lg ${processing ? 'bg-gray-600 cursor-wait' : 'bg-luxe-gold text-luxe-black hover:bg-white hover:scale-[1.02]'}`}
                 >
-                    {processing ? 'Contactando con el Banco...' : 'Pagar 99.00 €'}
+                    {processing ? 'Contactando con el Banco...' : `Pagar ${finalPrice} €`} {/* <--- PRECIO DINÁMICO */}
                 </button>
             </form>
         </div>

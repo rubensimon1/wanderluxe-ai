@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const CreateTrip = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [price, setPrice] = useState('...'); // Estado para el precio dinámico
   const [formData, setFormData] = useState({
     destination: '',
     days: 3,
@@ -11,8 +12,49 @@ const CreateTrip = () => {
     travelers: 2
   });
 
+  // --- EFECTO: CALCULAR PRECIO EN TIEMPO REAL ---
+  // Se ejecuta cada vez que cambia formData (días, presupuesto, viajeros)
+  useEffect(() => {
+    const calculatePrice = async () => {
+      const { days, budget, travelers } = formData;
+      if (days <= 0 || travelers <= 0) {
+          setPrice('N/A');
+          return;
+      }
+      
+      setPrice('Calculando...');
+      try {
+        // Llamamos a la nueva ruta del backend para calcular el precio
+        // Usamos template literals para enviar los parámetros en la URL
+        const response = await fetch(`/api/price?days=${days}&budget=${budget}&travelers=${travelers}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+          setPrice(data.price.toFixed(2));
+        } else {
+          setPrice('Error');
+        }
+      } catch (error) {
+        setPrice('Error');
+      }
+    };
+    
+    // Añadimos un pequeño delay para no saturar el servidor mientras el usuario teclea
+    const timer = setTimeout(() => {
+        calculatePrice();
+    }, 500);
+
+    return () => clearTimeout(timer); // Limpieza del timer
+  }, [formData]); // <- Dependencia: se ejecuta cuando formData cambia
+
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Manejo de números para que el precio se recalcule inmediatamente
+    let value = e.target.value;
+    if (e.target.name === 'days' || e.target.name === 'travelers') {
+        value = parseInt(value) || 0;
+    }
+    setFormData({ ...formData, [e.target.name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -21,15 +63,15 @@ const CreateTrip = () => {
     setLoading(true);
 
     try {
-      // Usamos la ruta relativa para pasar por el proxy (http://localhost:5173 -> http://localhost:3000)
+      // 1. Generar el Viaje (Backend)
       const response = await fetch('/api/trips/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
-        credentials: 'include' // Obligatorio para enviar la cookie de sesión
+        credentials: 'include' 
       });
 
-      // El servidor responderá con 401 si la sesión ha expirado
+      // Si hay error de sesión
       if (response.status === 401) {
         alert("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
         navigate('/login');
@@ -39,9 +81,14 @@ const CreateTrip = () => {
       const data = await response.json();
       
       if (response.ok) {
-        // Redirección al checkout pasando los datos del viaje creado
         setTimeout(() => {
-          navigate('/checkout', { state: { trip: data.trip } }); 
+          // 2. Redirigimos al Checkout
+          // Pasamos el objeto de viaje (data.trip) Y el precio calculado (price)
+          navigate('/checkout', { 
+            state: { 
+                trip: { ...data.trip, finalPrice: price } 
+            } 
+          }); 
         }, 1000);
       } else {
         alert("Error: " + (data.error || "No se pudo generar el viaje"));
@@ -80,18 +127,26 @@ const CreateTrip = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-xs uppercase text-gray-400 mb-2">Duración (Días)</label>
-              <input type="number" name="days" onChange={handleChange} defaultValue={3} min={1} className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-white focus:border-luxe-gold focus:outline-none"/>
+              <input type="number" name="days" onChange={handleChange} value={formData.days} min={1} className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-white focus:border-luxe-gold focus:outline-none"/>
             </div>
             <div>
               <label className="block text-xs uppercase text-gray-400 mb-2">Estilo</label>
-              <select name="budget" onChange={handleChange} className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-white focus:border-luxe-gold focus:outline-none appearance-none">
+              <select name="budget" onChange={handleChange} value={formData.budget} className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-white focus:border-luxe-gold focus:outline-none appearance-none">
                 <option>Lujo</option><option>Aventura</option><option>Relax</option><option>Cultural</option>
               </select>
             </div>
             <div>
               <label className="block text-xs uppercase text-gray-400 mb-2">Viajeros</label>
-              <input type="number" name="travelers" onChange={handleChange} defaultValue={2} min={1} className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-white focus:border-luxe-gold focus:outline-none"/>
+              <input type="number" name="travelers" onChange={handleChange} value={formData.travelers} min={1} className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-white focus:border-luxe-gold focus:outline-none"/>
             </div>
+          </div>
+
+          {/* BLOQUE DE PRECIO EN VIVO */}
+          <div className="text-center pt-4 pb-2 border-t border-white/10">
+            <p className="text-sm uppercase text-gray-400">Costo estimado del servicio de planificación</p>
+            <p className="text-5xl font-serif font-bold text-luxe-gold mt-2">
+              {price} €
+            </p>
           </div>
 
           <button type="submit" disabled={loading} className={`w-full py-5 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.01] shadow-xl ${loading ? 'bg-gray-600 cursor-wait' : 'bg-luxe-gold text-luxe-black hover:bg-white'}`}>
