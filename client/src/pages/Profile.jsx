@@ -3,26 +3,35 @@ import { useNavigate, Link } from 'react-router-dom';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState({ id: '', full_name: '', email: '' });
+  const [user, setUser] = useState({ id: '', full_name: '', email: '', avatar: '' });
   const [isEditing, setIsEditing] = useState(false);
-  
-  // Estado para la nueva contraseña
   const [passwords, setPasswords] = useState({ new: '', confirm: '' });
-  // Estado para simular cambio de color de avatar
   const [avatarColor, setAvatarColor] = useState('from-luxe-gold to-yellow-200');
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      setUser(JSON.parse(stored));
-    } else {
-      navigate('/login');
-    }
+    // Cargar perfil fresco del servidor para asegurar que vemos la foto actual
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/users/profile');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+          localStorage.setItem('user', JSON.stringify(data));
+        } else {
+          // Si falla (ej: no hay sesión), intentamos leer de memoria o redirigir
+          const stored = localStorage.getItem('user');
+          if (stored) setUser(JSON.parse(stored));
+          else navigate('/login');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchProfile();
   }, [navigate]);
 
   const handleLogout = async () => {
     try {
-      // Usamos la ruta relativa (Proxy)
       await fetch('/api/users/logout', { method: 'POST' });
     } catch (e) {
       console.error("Error logout backend", e);
@@ -33,32 +42,45 @@ const Profile = () => {
     navigate('/');
   };
 
+  // Función para leer el archivo de imagen y convertirlo a Base64
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Actualizamos el estado con la imagen en base64
+        setUser({ ...user, avatar: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAvatarClick = () => {
     if (!isEditing) return;
-    // Simulación: Cambiar estilo del avatar al hacer clic
-    const colors = [
-      'from-luxe-gold to-yellow-200',
-      'from-purple-600 to-blue-500',
-      'from-green-500 to-emerald-700',
-      'from-red-500 to-orange-500'
-    ];
-    const random = colors[Math.floor(Math.random() * colors.length)];
-    setAvatarColor(random);
+    // Solo cambia el color si no hay imagen de avatar
+    if (!user.avatar) {
+      const colors = [
+        'from-luxe-gold to-yellow-200',
+        'from-purple-600 to-blue-500',
+        'from-green-500 to-emerald-700',
+        'from-red-500 to-orange-500'
+      ];
+      const random = colors[Math.floor(Math.random() * colors.length)];
+      setAvatarColor(random);
+    }
   };
 
   const handleSave = async () => {
-    // Validación básica de contraseña
     if (passwords.new && passwords.new !== passwords.confirm) {
       alert("Las contraseñas no coinciden.");
       return;
     }
 
     try {
-      // Usamos la ruta relativa (Proxy)
       const response = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...user, password: passwords.new }) // Enviamos password si existe
+        body: JSON.stringify({ ...user, password: passwords.new })
       });
       
       const data = await response.json();
@@ -66,7 +88,7 @@ const Profile = () => {
       if (response.ok) {
         localStorage.setItem('user', JSON.stringify(data.user)); 
         setUser(data.user);
-        setPasswords({ new: '', confirm: '' }); // Limpiar campos de contraseña
+        setPasswords({ new: '', confirm: '' });
         setIsEditing(false);
         alert("✨ Perfil actualizado correctamente");
       } else {
@@ -93,19 +115,28 @@ const Profile = () => {
 
         <div className="flex flex-col md:flex-row gap-10 items-start">
           
-          {/* Avatar Interactivo */}
+          {/* Avatar Interactivo con Subida de Foto */}
           <div className="flex flex-col items-center gap-4">
             <div 
               onClick={handleAvatarClick}
-              className={`w-32 h-32 rounded-full bg-gradient-to-tr ${avatarColor} flex items-center justify-center text-4xl font-bold text-luxe-black shadow-lg shadow-luxe-gold/20 border-4 border-black relative group ${isEditing ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+              className={`w-32 h-32 rounded-full overflow-hidden border-4 border-luxe-gold shadow-lg shadow-luxe-gold/20 relative group ${isEditing ? 'cursor-pointer' : ''}`}
             >
-              {user.full_name ? user.full_name.charAt(0).toUpperCase() : '?'}
-              
-              {/* Overlay de edición */}
-              {isEditing && (
-                <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity font-bold">
-                  CAMBIAR<br/>COLOR
+              {/* Si hay avatar (foto), lo mostramos. Si no, mostramos iniciales con color */}
+              {user.avatar ? (
+                <img src={user.avatar} alt="User Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className={`w-full h-full bg-gradient-to-tr ${avatarColor} flex items-center justify-center text-4xl font-bold text-luxe-black`}>
+                  {user.full_name ? user.full_name.charAt(0).toUpperCase() : '?'}
                 </div>
+              )}
+              
+              {/* Overlay para subir foto (Solo en modo edición) */}
+              {isEditing && (
+                <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <span className="font-bold mb-1">CAMBIAR FOTO</span>
+                  <span className="text-[10px] text-gray-300">(Clic aquí)</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                </label>
               )}
             </div>
             <div className="text-xs text-gray-500 uppercase tracking-widest text-center">
@@ -116,7 +147,6 @@ const Profile = () => {
           {/* Formulario de Datos */}
           <div className="flex-1 w-full space-y-6">
             
-            {/* Nombre */}
             <div>
               <label className="block text-xs uppercase text-gray-500 mb-2">Nombre Completo</label>
               {isEditing ? (
@@ -126,7 +156,6 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-xs uppercase text-gray-500 mb-2">Correo Electrónico</label>
               {isEditing ? (
@@ -136,7 +165,7 @@ const Profile = () => {
               )}
             </div>
 
-            {/* SECCIÓN DE SEGURIDAD (Nueva) */}
+            {/* SECCIÓN DE SEGURIDAD */}
             <div className="pt-4 border-t border-white/10 mt-4">
               <h3 className="text-luxe-gold font-serif text-sm mb-4">Seguridad</h3>
               {isEditing ? (

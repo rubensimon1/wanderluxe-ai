@@ -1,13 +1,13 @@
 const db = require('../../db');
-const bcrypt = require('bcrypt'); // Necesario para encriptar la nueva password
+const bcrypt = require('bcrypt'); 
 
 // --- OBTENER PERFIL ---
 const getProfile = async (req, res) => {
-    // Usamos el ID del usuario autenticado (del token)
     const userId = req.user.id; 
 
     try {
-        const result = await db.query('SELECT id, full_name, email, role, created_at FROM users WHERE id = $1', [userId]);
+        // MODIFICADO: Añadimos 'avatar' a la consulta
+        const result = await db.query('SELECT id, full_name, email, role, avatar, created_at FROM users WHERE id = $1', [userId]);
         
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -19,26 +19,28 @@ const getProfile = async (req, res) => {
     }
 };
 
-// --- ACTUALIZAR PERFIL (Ahora soporta contraseña) ---
+// --- ACTUALIZAR PERFIL (Contraseña + Avatar) ---
 const updateProfile = async (req, res) => {
-    const { full_name, email, password } = req.body;
-    const userId = req.user.id; // Seguridad: Usamos el ID del token, no del body
+    // MODIFICADO: Recibimos 'avatar' del cuerpo de la petición
+    const { full_name, email, password, avatar } = req.body;
+    const userId = req.user.id; 
 
     try {
         let query;
         let values;
 
-        // Si el usuario envió una nueva contraseña, hay que encriptarla
+        // Caso 1: El usuario quiere cambiar la contraseña
         if (password && password.trim() !== "") {
             const salt = await bcrypt.genSalt(10);
             const passwordHash = await bcrypt.hash(password, salt);
             
-            query = 'UPDATE users SET full_name = $1, email = $2, password_hash = $3 WHERE id = $4 RETURNING id, full_name, email, role';
-            values = [full_name, email, passwordHash, userId];
+            // Actualizamos nombre, email, password Y AVATAR
+            query = 'UPDATE users SET full_name = $1, email = $2, password_hash = $3, avatar = $4 WHERE id = $5 RETURNING id, full_name, email, avatar, role';
+            values = [full_name, email, passwordHash, avatar, userId];
         } else {
-            // Si no hay contraseña nueva, solo actualizamos datos normales
-            query = 'UPDATE users SET full_name = $1, email = $2 WHERE id = $3 RETURNING id, full_name, email, role';
-            values = [full_name, email, userId];
+            // Caso 2: Solo actualiza datos básicos (incluyendo avatar)
+            query = 'UPDATE users SET full_name = $1, email = $2, avatar = $3 WHERE id = $4 RETURNING id, full_name, email, avatar, role';
+            values = [full_name, email, avatar, userId];
         }
 
         const result = await db.query(query, values);
@@ -59,7 +61,7 @@ const updateProfile = async (req, res) => {
 const logout = (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
-        secure: true, 
+        secure: true, // True para HTTPS en producción (Render/Vercel)
         sameSite: 'lax',
         path: '/'
     });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -7,7 +7,26 @@ import CreateTrip from './pages/CreateTrip';
 import Checkout from './pages/Checkout';
 import MyTrips from './pages/MyTrips';
 import TripDetails from './pages/TripDetails';
-import Profile from './pages/Profile'; // <--- NUEVO: Importamos el perfil
+import Profile from './pages/Profile';
+import Services from './pages/Services'; // <--- NUEVA PÁGINA
+import Footer from './components/Footer'; // <--- NUEVO FOOTER
+
+// --- LAYOUT INTELIGENTE ---
+// Este componente envuelve a toda la app para decidir dónde mostrar el Footer
+const Layout = ({ children }) => {
+  const location = useLocation();
+  // Ocultamos el footer en las páginas de autenticación para que se vean más limpias
+  const hideFooter = ['/login', '/register'].includes(location.pathname);
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-grow">
+        {children}
+      </div>
+      {!hideFooter && <Footer />}
+    </div>
+  );
+};
 
 // --- COMPONENTE PORTADA (HOME) --- 
 const Home = () => {
@@ -18,7 +37,7 @@ const Home = () => {
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-luxe-gold opacity-20 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-luxe-gold opacity-10 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div className="z-10 text-center px-4 max-w-5xl">
+      <div className="z-10 text-center px-4 max-w-5xl mt-[-50px]">
         <h1 className="text-6xl md:text-8xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-luxe-gold via-yellow-200 to-luxe-gold mb-6 drop-shadow-lg">
           WanderLuxe AI
         </h1>
@@ -44,8 +63,8 @@ const Home = () => {
         </div>
       </div>
 
-      <div className="absolute bottom-8 text-gray-600 text-xs tracking-[0.2em]">
-        EST. 2025 • EXCLUSIVE TRAVEL CONCIERGE
+      <div className="absolute bottom-10 text-gray-600 text-xs tracking-[0.2em] animate-bounce">
+        DESCUBRE MÁS ↓
       </div>
     </div>
   );
@@ -55,24 +74,25 @@ const Home = () => {
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Rutas Públicas */}
-        <Route path="/" element={<Home />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-        
-        {/* Rutas Privadas */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/create-trip" element={<CreateTrip />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/my-trips" element={<MyTrips />} />
-        
-        {/* Ruta de Detalles */}
-        <Route path="/trip/:id" element={<TripDetails />} />
-
-        {/* Ruta de Perfil (NUEVA) */}
-        <Route path="/profile" element={<Profile />} />
-      </Routes>
+      <Layout>
+        <Routes>
+          {/* Rutas Públicas */}
+          <Route path="/" element={<Home />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+          
+          {/* Rutas Privadas y de Servicio */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/create-trip" element={<CreateTrip />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/my-trips" element={<MyTrips />} />
+          <Route path="/trip/:id" element={<TripDetails />} />
+          <Route path="/profile" element={<Profile />} />
+          
+          {/* Nueva Ruta de Servicios (Hoteles/Coches) */}
+          <Route path="/services" element={<Services />} />
+        </Routes>
+      </Layout>
     </BrowserRouter>
   );
 }
