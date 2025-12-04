@@ -15,13 +15,17 @@ const priceRoutes = require('./src/routes/priceRoutes'); // <--- NUEVO: Rutas de
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 2. CONFIGURACIÓN CORS (MODIFICADA PARA DESPLIEGUE)
+// CONFIGURACIÓN CORS (La que ya tenías)
 app.use(cors({
-    origin: true, 
-    credentials: true 
+    origin: true,
+    credentials: true
 }));
 
-app.use(express.json());
+// --- CAMBIO AQUÍ: AUMENTAMOS EL LÍMITE A 50MB ---
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// -----------------------------------------------
+
 app.use(cookieParser());
 
 // 3. ACTIVAR LAS RUTAS
