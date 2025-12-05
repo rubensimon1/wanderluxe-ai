@@ -1,29 +1,37 @@
+/* Fuentes de Lujo */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Fuentes de Lujo */
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 
 /* RESET GLOBAL */
 :root {
   font-family: 'Lato', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: dark; /* Fuerza modo oscuro nativo */
+  color-scheme: dark;
+  /* Fuerza modo oscuro nativo */
 }
 
 /* IMPORTANTE: Esto arregla el descuadre */
-body, #root {
+body,
+#root {
   width: 100%;
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  overflow-x: hidden; /* Evita scroll lateral indeseado */
+  overflow-x: hidden;
+  /* Evita scroll lateral indeseado */
   display: flex;
   flex-direction: column;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: 'Playfair Display', serif;
 }
