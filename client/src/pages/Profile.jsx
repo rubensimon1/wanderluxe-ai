@@ -36,7 +36,7 @@ const Profile = () => {
     } catch (e) {
       console.error("Error logout backend", e);
     }
-    
+
     localStorage.removeItem('user');
     alert("Has cerrado sesión correctamente.");
     navigate('/');
@@ -82,11 +82,11 @@ const Profile = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...user, password: passwords.new })
       });
-      
+
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('user', JSON.stringify(data.user)); 
+        localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
         setPasswords({ new: '', confirm: '' });
         setIsEditing(false);
@@ -100,11 +100,11 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-luxe-black text-luxe-white font-sans p-8 flex justify-center items-center relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-black via-gray-900 to-purple-900/20 z-0"></div>
+    <div className="min-h-screen bg-luxe-cream dark:bg-luxe-black text-gray-900 dark:text-luxe-white font-sans p-8 flex justify-center items-center relative overflow-hidden transition-colors duration-300">
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-gray-100 dark:from-black via-gray-50 dark:via-gray-900 to-amber-50/20 dark:to-purple-900/20 z-0"></div>
 
-      <div className="w-full max-w-2xl z-10 bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-2xl">
-        
+      <div className="w-full max-w-2xl z-10 bg-white dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 p-10 rounded-3xl shadow-2xl">
+
         {/* Cabecera */}
         <div className="flex justify-between items-center mb-10 border-b border-white/10 pb-6">
           <h1 className="text-3xl font-serif text-luxe-gold">Mi Perfil</h1>
@@ -114,10 +114,10 @@ const Profile = () => {
         </div>
 
         <div className="flex flex-col md:flex-row gap-10 items-start">
-          
+
           {/* Avatar Interactivo con Subida de Foto */}
           <div className="flex flex-col items-center gap-4">
-            <div 
+            <div
               onClick={handleAvatarClick}
               className={`w-32 h-32 rounded-full overflow-hidden border-4 border-luxe-gold shadow-lg shadow-luxe-gold/20 relative group ${isEditing ? 'cursor-pointer' : ''}`}
             >
@@ -129,7 +129,7 @@ const Profile = () => {
                   {user.full_name ? user.full_name.charAt(0).toUpperCase() : '?'}
                 </div>
               )}
-              
+
               {/* Overlay para subir foto (Solo en modo edición) */}
               {isEditing && (
                 <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
@@ -140,17 +140,17 @@ const Profile = () => {
               )}
             </div>
             <div className="text-xs text-gray-500 uppercase tracking-widest text-center">
-              Miembro WanderLuxe<br/>ID: {user.id}
+              Miembro WanderLuxe<br />ID: {user.id}
             </div>
           </div>
 
           {/* Formulario de Datos */}
           <div className="flex-1 w-full space-y-6">
-            
+
             <div>
               <label className="block text-xs uppercase text-gray-500 mb-2">Nombre Completo</label>
               {isEditing ? (
-                <input type="text" value={user.full_name} onChange={(e) => setUser({...user, full_name: e.target.value})} className="w-full bg-black/50 border border-luxe-gold rounded-lg p-3 text-white focus:outline-none"/>
+                <input type="text" value={user.full_name} onChange={(e) => setUser({ ...user, full_name: e.target.value })} className="w-full bg-black/50 border border-luxe-gold rounded-lg p-3 text-white focus:outline-none" />
               ) : (
                 <div className="text-xl font-medium text-white border-b border-white/10 pb-2">{user.full_name}</div>
               )}
@@ -159,7 +159,7 @@ const Profile = () => {
             <div>
               <label className="block text-xs uppercase text-gray-500 mb-2">Correo Electrónico</label>
               {isEditing ? (
-                <input type="email" value={user.email} onChange={(e) => setUser({...user, email: e.target.value})} className="w-full bg-black/50 border border-luxe-gold rounded-lg p-3 text-white focus:outline-none"/>
+                <input type="email" value={user.email} onChange={(e) => setUser({ ...user, email: e.target.value })} className="w-full bg-black/50 border border-luxe-gold rounded-lg p-3 text-white focus:outline-none" />
               ) : (
                 <div className="text-xl font-medium text-gray-300 border-b border-white/10 pb-2">{user.email}</div>
               )}
@@ -170,19 +170,19 @@ const Profile = () => {
               <h3 className="text-luxe-gold font-serif text-sm mb-4">Seguridad</h3>
               {isEditing ? (
                 <div className="space-y-3">
-                  <input 
-                    type="password" 
-                    placeholder="Nueva Contraseña" 
-                    className="w-full bg-black/50 border border-white/20 rounded-lg p-3 text-white text-sm focus:border-luxe-gold focus:outline-none" 
+                  <input
+                    type="password"
+                    placeholder="Nueva Contraseña"
+                    className="w-full bg-black/50 border border-white/20 rounded-lg p-3 text-white text-sm focus:border-luxe-gold focus:outline-none"
                     value={passwords.new}
-                    onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                   />
-                  <input 
-                    type="password" 
-                    placeholder="Confirmar Contraseña" 
-                    className="w-full bg-black/50 border border-white/20 rounded-lg p-3 text-white text-sm focus:border-luxe-gold focus:outline-none" 
+                  <input
+                    type="password"
+                    placeholder="Confirmar Contraseña"
+                    className="w-full bg-black/50 border border-white/20 rounded-lg p-3 text-white text-sm focus:border-luxe-gold focus:outline-none"
                     value={passwords.confirm}
-                    onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                   />
                 </div>
               ) : (
